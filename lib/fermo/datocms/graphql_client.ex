@@ -13,7 +13,7 @@ defmodule Fermo.DatoCMS.GraphQLClient do
   def query!(query, params \\ %{}) do
     if StandardClient.live? do
       {:ok, body} = QueryMonitor.subscribe!(query, params, fn ->
-        handle_reload()
+        handle_reload(nil)
       end)
 
       body
@@ -29,7 +29,7 @@ defmodule Fermo.DatoCMS.GraphQLClient do
   def query_for_path!(path, query, params \\ %{}) do
     if StandardClient.live? do
       {:ok, body} = QueryMonitor.subscribe!(query, params, fn ->
-        handle_path_reload(path)
+        handle_reload(path)
       end)
 
       body
@@ -38,16 +38,13 @@ defmodule Fermo.DatoCMS.GraphQLClient do
     end
   end
 
-  defp handle_reload() do
-    # This query comes from a call from within the project's
-    # config/0 function.
-    # We cannot know which pages (i.e. paths) it affects,
-    # So we need to reload the Fermo config
-    {:ok} = Dependencies.reinitialize()
-    {:ok} = SocketRegistry.reload_all()
-  end
-
-  defp handle_path_reload(path) do
+  defp handle_reload(path) do
+    if !path do
+      # This query is not associated with a specific path.
+      # We cannot know which pages (i.e. paths) it affects,
+      # So we need to reload the Fermo config
+      {:ok} = Dependencies.reinitialize()
+    end
     {:ok} = SocketRegistry.reload(path)
   end
 end
